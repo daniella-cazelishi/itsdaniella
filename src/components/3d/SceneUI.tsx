@@ -110,18 +110,51 @@ export default function SceneUI() {
         }
         setLoading(false);
       });
-    }, 3000);
+    }, 5000);
     return () => clearTimeout(timer);
   }, []);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'tried' | 'bucket') => {
+  const compressImage = (base64: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800; // Sufficient for aesthetic cards
+        const MAX_HEIGHT = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.7)); // 70% quality JPEG is perfect balance
+      };
+    });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'tried' | 'bucket') => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         const base64String = reader.result as string;
-        if (type === 'tried') setNewEntry({ ...newEntry, image: base64String });
-        else setNewCurious({ ...newCurious, image: base64String });
+        const compressed = await compressImage(base64String);
+        if (type === 'tried') setNewEntry({ ...newEntry, image: compressed });
+        else setNewCurious({ ...newCurious, image: compressed });
       };
       reader.readAsDataURL(file);
     }
@@ -165,7 +198,7 @@ export default function SceneUI() {
       setUser(u);
       await loadUserData(u);
       setPhase('welcome');
-      setTimeout(() => setPhase('main'), 3000);
+      setTimeout(() => setPhase('main'), 4500);
     } catch (error: any) {
       console.error("Post auth failed", error);
       setAuthError(error.message);
@@ -245,11 +278,16 @@ export default function SceneUI() {
       const node = document.querySelector('.share-card') as HTMLElement;
       if (!node) throw new Error("Card not found");
 
-      // Generate high-quality image from the card
+      // Wait a bit to ensure all images & fonts are fully painted
+      await new Promise(r => setTimeout(r, 800));
+
+      // Generate high-quality image from the card with robust settings
       const dataUrl = await htmlToImage.toPng(node, {
         quality: 1,
-        pixelRatio: 2,
-        backgroundColor: '#0c0605'
+        pixelRatio: 3, // Higher quality
+        backgroundColor: '#0c0605',
+        cacheBust: true,
+        skipFonts: false
       });
 
       // Convert dataUrl to a File object
@@ -288,13 +326,14 @@ export default function SceneUI() {
                
                {/* PREMIUM STORY CARD - ONE-LINE LAYOUT */}
                <div className="relative w-full aspect-[9/16] bg-[#0c0605] rounded-[3.5rem] overflow-hidden shadow-[0_0_120px_rgba(251,204,225,0.15)] border border-white/10 group share-card">
-                  
+                                    {/* BACKGROUND BLUR TO PREVENT CROPPED LOOK */}
                   <div className="absolute inset-0 bg-black" />
-                  <img src={getDrinkAesthetic(sharingItem).image} className="absolute inset-0 w-full h-full object-cover opacity-30 blur-2xl scale-125" />
+                  <img src={getDrinkAesthetic(sharingItem).image} crossOrigin="anonymous" className="absolute inset-0 w-full h-full object-cover opacity-30 blur-2xl scale-125" />
                   
+                  {/* MAIN IMAGE (FIT INSTEAD OF FILL TO PREVENT CROP) */}
                   <div className="absolute inset-0 flex items-center justify-center p-8 pb-56 pt-28">
                      <div className="w-full h-full relative rounded-2xl overflow-hidden shadow-2xl border border-white/5 bg-black/20">
-                        <img src={getDrinkAesthetic(sharingItem).image} className="w-full h-full object-contain" />
+                        <img src={getDrinkAesthetic(sharingItem).image} crossOrigin="anonymous" className="w-full h-full object-contain" />
                      </div>
                   </div>
                   
@@ -369,7 +408,7 @@ export default function SceneUI() {
       <AnimatePresence>
         {phase === 'intro' && (
           <motion.div exit={{ opacity: 0 }} className="fixed inset-0 z-[6000] bg-[#0c0605] flex items-center justify-center">
-            <motion.div initial={{ opacity: 0, letterSpacing: '1em' }} animate={{ opacity: 1, letterSpacing: '0.1em' }} transition={{ duration: 2 }} className="text-center space-y-6">
+            <motion.div initial={{ opacity: 0, letterSpacing: '1em' }} animate={{ opacity: 1, letterSpacing: '0.1em' }} transition={{ duration: 4, ease: "easeOut" }} className="text-center space-y-6">
                <h1 className="text-7xl font-serif italic drop-shadow-[0_0_30px_rgba(251,204,225,0.3)]">sipwithdaniella.</h1>
                <p className="text-[9px] tracking-[0.8em] uppercase opacity-30 font-bold italic">The Digital Journal</p>
             </motion.div>
@@ -544,7 +583,7 @@ export default function SceneUI() {
                                 return (
                                 <motion.div layout key={item.id} className="bg-white/5 p-5 rounded-[2.5rem] border border-white/10 space-y-4 hover:border-primary/40 transition-all group relative overflow-hidden shadow-xl flex flex-col h-fit">
                                    <div className="w-full h-72 bg-white/5 rounded-3xl flex items-center justify-center relative overflow-hidden border border-white/5 group-hover:scale-[1.02] transition-transform duration-500">
-                                      <img src={aesthetic.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all grayscale group-hover:grayscale-0 duration-700" />
+                                      <img src={aesthetic.image} alt={item.name} crossOrigin="anonymous" className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all grayscale group-hover:grayscale-0 duration-700" />
                                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                                       <div className="absolute top-4 right-4 flex gap-0.5 bg-black/40 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">
                                          {[...Array(item.rating || 5)].map((_, i) => <Star key={i} className="w-2.5 h-2.5 text-primary" fill="currentColor" />)}
