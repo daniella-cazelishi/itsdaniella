@@ -159,23 +159,35 @@ export default function SceneUI() {
   };
 
   const handlePostAuth = async (u: User) => {
-    setUser(u);
-    await loadUserData(u);
-    setPhase('welcome');
-    setTimeout(() => setPhase('main'), 3000);
+    try {
+      setUser(u);
+      await loadUserData(u);
+      setPhase('welcome');
+      setTimeout(() => setPhase('main'), 3000);
+    } catch (error: any) {
+      console.error("Post auth failed", error);
+      setAuthError(error.message);
+      setLoading(false);
+    }
   };
 
   const loadUserData = async (u: User) => {
-    const userRef = doc(db, 'coffee_users', u.uid);
-    const docSnap = await getDoc(userRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      setTriedList((data.tried || []).sort((a: any, b: any) => b.id - a.id));
-      setBucketList((data.bucket || []).sort((a: any, b: any) => b.id - a.id));
-    } else {
-      await setDoc(userRef, { username: u.displayName || "Curator", email: u.email, tried: [], bucket: [] });
+    try {
+      const userRef = doc(db, 'coffee_users', u.uid);
+      const docSnap = await getDoc(userRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setTriedList((data.tried || []).sort((a: any, b: any) => b.id - a.id));
+        setBucketList((data.bucket || []).sort((a: any, b: any) => b.id - a.id));
+      } else {
+        await setDoc(userRef, { username: u.displayName || "Curator", email: u.email, tried: [], bucket: [] });
+      }
+      fetchCommunityBrews();
+    } catch (error: any) {
+      console.error("Load user data failed", error);
+      // Even if database fails, we proceed to main to show the UI
+      setPhase('main');
     }
-    fetchCommunityBrews();
   };
 
   const fetchCommunityBrews = async () => {
@@ -334,18 +346,25 @@ export default function SceneUI() {
                <div className="space-y-4">
                   <h2 className="text-5xl font-serif italic tracking-tight">The Roastery.</h2>
                   <p className="text-[10px] uppercase tracking-widest opacity-40 font-bold italic">Secure Your Coffee Legacy</p>
+                  {authError && (
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-[10px] text-red-500 font-bold uppercase tracking-widest flex items-center gap-3">
+                       <ShieldCheck className="w-4 h-4 shrink-0" />
+                       <span className="text-left">{authError}</span>
+                       <button onClick={() => setAuthError("")} className="ml-auto opacity-50 hover:opacity-100"><X className="w-3 h-3" /></button>
+                    </motion.div>
+                  )}
                </div>
                <AnimatePresence mode="wait">
                   {authMode === 'options' ? (
                     <motion.div key="options" initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }} className="space-y-4">
-                       <button onClick={() => handleSocialLogin('google')} className="w-full bg-white text-black py-5 rounded-full font-bold flex items-center justify-center gap-4 hover:bg-primary transition-all shadow-xl group">
+                       <button onClick={() => handleSocialLogin('google')} className="w-full bg-white text-black py-5 rounded-2xl font-bold flex items-center justify-center gap-4 hover:bg-primary transition-all shadow-[0_10px_30px_rgba(255,255,255,0.1)] group">
                           <LogIn className="w-5 h-5 group-hover:scale-110 transition-transform" /> GOOGLE SESSION
                        </button>
-                       <button onClick={() => setAuthMode('signup')} className="w-full bg-primary/20 border border-primary/20 text-primary py-5 rounded-full font-bold flex items-center justify-center gap-4 hover:bg-primary/30 transition-all shadow-xl group">
+                       <button onClick={() => setAuthMode('signup')} className="w-full bg-primary/10 border border-primary/20 text-primary py-5 rounded-2xl font-bold flex items-center justify-center gap-4 hover:bg-primary/20 transition-all shadow-xl group">
                           <Mail className="w-5 h-5 group-hover:scale-110 transition-transform" /> CREATE AN ACCOUNT
                        </button>
                        <div className="pt-8 flex flex-col gap-4">
-                          <button onClick={() => setAuthMode('email')} className="text-[10px] uppercase tracking-widest opacity-40 hover:opacity-100 transition-opacity font-bold underline decoration-primary/40 underline-offset-8">Sign In</button>
+                          <button onClick={() => setAuthMode('email')} className="text-[10px] uppercase tracking-[0.4em] opacity-40 hover:opacity-100 transition-all font-bold hover:text-primary">Sign In to Existing Profile</button>
                           <button onClick={() => setAuthMode('admin_secret')} className="text-[9px] uppercase tracking-widest opacity-5 hover:opacity-100 transition-opacity font-bold mt-4 italic">Authorized Curator Entrance</button>
                        </div>
                     </motion.div>
@@ -371,10 +390,13 @@ export default function SceneUI() {
                              <Coffee className="w-5 h-5" />
                           </button>
                        </div>
-                       <button onClick={handleEmailAuth} className="w-full bg-primary text-black py-5 rounded-full font-bold uppercase tracking-widest text-[11px]">
-                          {authMode === 'signup' ? "Create Profile" : "Sign In"} <ArrowRight className="w-4 h-4" />
+                       <button onClick={handleEmailAuth} className="w-full relative group overflow-hidden bg-primary text-black py-5 rounded-2xl font-bold uppercase tracking-[0.3em] text-[11px] shadow-[0_20px_40px_rgba(251,204,225,0.2)] hover:scale-[1.02] active:scale-95 transition-all">
+                          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                          <span className="relative flex items-center justify-center gap-2">
+                             {authMode === 'signup' ? "Create Profile" : "Sign In"} <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                          </span>
                        </button>
-                       <button onClick={() => setAuthMode('options')} className="text-[10px] uppercase tracking-widest opacity-40 hover:opacity-100 transition-opacity font-bold">Go Back</button>
+                       <button onClick={() => setAuthMode('options')} className="text-[10px] uppercase tracking-[0.4em] opacity-40 hover:opacity-100 hover:text-primary transition-all font-bold">Go Back</button>
                     </motion.div>
                   )}
                </AnimatePresence>
