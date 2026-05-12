@@ -39,8 +39,10 @@ import {
   X,
   Download,
   Check,
-  Maximize2
+  Maximize2,
+  Loader2
 } from 'lucide-react';
+import * as htmlToImage from 'html-to-image';
 import { db, auth } from '@/lib/firebase';
 import { doc, setDoc, getDoc, collection, getDocs, query, limit, orderBy } from 'firebase/firestore';
 import { 
@@ -234,15 +236,44 @@ export default function SceneUI() {
     setAiMood(moods[Math.floor(Math.random() * moods.length)]);
   };
 
+  const [sharing, setSharing] = useState(false);
+
   const handleShare = async () => {
     if (!sharingItem) return;
+    setSharing(true);
     try {
-      const text = `Brewed a memory: ${sharingItem.name} at ${sharingItem.place}. @itsdaniella`;
-      if (navigator.share) {
-        await navigator.share({ title: 'SipWithDaniella', text: text, url: window.location.href });
+      const node = document.querySelector('.share-card') as HTMLElement;
+      if (!node) throw new Error("Card not found");
+
+      // Generate high-quality image from the card
+      const dataUrl = await htmlToImage.toPng(node, {
+        quality: 1,
+        pixelRatio: 2,
+        backgroundColor: '#0c0605'
+      });
+
+      // Convert dataUrl to a File object
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], `sip-${sharingItem.id}.png`, { type: 'image/png' });
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'SipWithDaniella',
+          text: `Brewed a memory: ${sharingItem.name} @itsdaniella`
+        });
+      } else {
+        // Fallback: Download the image if sharing files isn't supported
+        const link = document.createElement('a');
+        link.download = `sip-${sharingItem.id}.png`;
+        link.href = dataUrl;
+        link.click();
       }
     } catch (error: any) {
       if (error.name !== 'AbortError') console.error("Share failed", error);
+    } finally {
+      setSharing(false);
     }
   };
 
@@ -317,8 +348,16 @@ export default function SceneUI() {
 
                <div className="flex gap-3 w-full">
                   <button onClick={() => setSharingItem(null)} className="flex-1 py-4 rounded-2xl bg-white/5 border border-white/10 font-bold uppercase text-[10px] tracking-widest text-white/40">Close</button>
-                  <button onClick={handleShare} className="flex-[2] py-4 rounded-2xl bg-primary text-black font-bold uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 shadow-xl hover:bg-white transition-all">
-                     <InstagramIcon className="w-4 h-4" /> Share Story
+                  <button onClick={handleShare} disabled={sharing} className="flex-[2] py-4 rounded-2xl bg-primary text-black font-bold uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 shadow-xl hover:bg-white transition-all disabled:opacity-50">
+                     {sharing ? (
+                        <>
+                           <Loader2 className="w-4 h-4 animate-spin" /> Generating Card...
+                        </>
+                     ) : (
+                        <>
+                           <InstagramIcon className="w-4 h-4" /> Share Story
+                        </>
+                     )}
                   </button>
                </div>
             </motion.div>
