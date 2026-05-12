@@ -357,39 +357,40 @@ export default function SceneUI() {
                      </div>
                   </div>
 
-                  {/* HORIZONTAL / ONE-LINE CONTENT LAYOUT - NOW CENTERED & SPACED */}
-                  <div className="absolute bottom-12 left-0 w-full px-10 space-y-8">
-                     
-                     <div className="space-y-6 text-center">
-                        {/* THE DRINK NAME - CENTERED */}
-                        <h3 className="text-5xl font-serif italic text-white tracking-tighter leading-tight">{sharingItem.name}</h3>
+                  {/* PREMIUM MAGAZINE LAYOUT - ASYMMETRICAL & ELEGANT */}
+                  <div className="absolute bottom-12 left-0 w-full px-10">
+                     <div className="bg-black/40 backdrop-blur-xl border border-white/10 p-8 rounded-[2.5rem] space-y-6 shadow-2xl">
+                        
+                        {/* DRINK TITLE - BOLD EDITORIAL STYLE */}
+                        <div className="space-y-1">
+                           <p className="text-[8px] uppercase tracking-[0.5em] text-primary/60 font-bold italic">Today's Selection</p>
+                           <h3 className="text-5xl font-serif italic text-white tracking-tighter leading-none">{sharingItem.name}</h3>
+                        </div>
 
-                        {/* THE METADATA LINE: PLACE & RATING - SPACED DOWN */}
-                        <div className="flex flex-col items-center gap-4 border-y border-white/5 py-6">
-                           <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-[0.3em] text-[10px]">
-                              <MapPin className="w-3 h-3" /> {sharingItem.place}
+                        {/* METADATA BAR - CLEAN HORIZONTAL LINE */}
+                        <div className="flex items-center justify-between border-t border-white/10 pt-6">
+                           <div className="flex items-center gap-2 text-white/80 font-bold uppercase tracking-widest text-[9px]">
+                              <MapPin className="w-3.5 h-3.5 text-primary" /> {sharingItem.place}
                            </div>
-                           <div className="flex gap-1">
+                           <div className="flex gap-1 bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
                               {[...Array(5)].map((_, i) => (
-                                 <Star key={i} className={`w-3.5 h-3.5 ${i < (sharingItem.rating || 5) ? 'text-primary' : 'text-white/10'}`} fill={i < (sharingItem.rating || 5) ? "currentColor" : "none"} />
+                                 <Star key={i} className={`w-2.5 h-2.5 ${i < (sharingItem.rating || 5) ? 'text-primary' : 'text-white/10'}`} fill={i < (sharingItem.rating || 5) ? "currentColor" : "none"} />
                               ))}
                            </div>
                         </div>
 
-                        {/* NOTES - CENTERED */}
-                        <p className="text-xs italic text-white/50 font-serif leading-relaxed px-4">
-                           "{sharingItem.notes || 'Another chapter in my coffee journey.'}"
+                        {/* SIGNATURE CAPTION */}
+                        <p className="text-[11px] italic text-white/40 font-serif leading-relaxed border-l-2 border-primary/20 pl-4">
+                           "{sharingItem.notes || 'A moment of silence, a cup of excellence.'}"
                         </p>
-                     </div>
 
-                     <div className="pt-4 flex items-end justify-between border-t border-white/5 opacity-40">
-                        <div className="space-y-0.5">
-                           <p className="text-[5px] uppercase tracking-widest font-bold">Recorded On</p>
-                           <span className="text-[9px] uppercase tracking-widest font-bold">{sharingItem.date}</span>
-                        </div>
-                        <div className="text-right">
-                           <p className="text-[5px] uppercase tracking-widest font-bold">Curated By</p>
-                           <span className="text-[9px] text-primary uppercase tracking-widest font-bold">@{user?.displayName?.split(' ')[0] || "Curator"}</span>
+                        {/* FOOTER INFO */}
+                        <div className="pt-4 flex items-center justify-between border-t border-white/5 opacity-40">
+                           <div className="flex items-center gap-2">
+                              <div className="w-1 h-1 rounded-full bg-primary" />
+                              <span className="text-[8px] uppercase tracking-widest font-bold">{sharingItem.date}</span>
+                           </div>
+                           <span className="text-[8px] text-primary uppercase tracking-widest font-bold">@{user?.displayName?.split(' ')[0] || "Curator"}</span>
                         </div>
                      </div>
                   </div>
