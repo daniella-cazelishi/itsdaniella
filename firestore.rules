@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow users to read and write their own coffee profiles based on their username
+    match /coffee_users/{username} {
+      allow read, write: if true;
+    }
+  }
+}
