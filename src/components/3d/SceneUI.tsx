@@ -91,6 +91,7 @@ export default function SceneUI() {
   const [adminKey, setAdminKey] = useState("");
   const [authError, setAuthError] = useState("");
   const [aiMood, setAiMood] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const curiousFileInputRef = useRef<HTMLInputElement>(null);
@@ -149,12 +150,19 @@ export default function SceneUI() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'tried' | 'bucket') => {
     const file = e.target.files?.[0];
     if (file) {
+      setIsUploading(true);
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const base64String = reader.result as string;
-        const compressed = await compressImage(base64String);
-        if (type === 'tried') setNewEntry({ ...newEntry, image: compressed });
-        else setNewCurious({ ...newCurious, image: compressed });
+        try {
+          const base64String = reader.result as string;
+          const compressed = await compressImage(base64String);
+          if (type === 'tried') setNewEntry({ ...newEntry, image: compressed });
+          else setNewCurious({ ...newCurious, image: compressed });
+        } catch (err) {
+          console.error("Compression failed", err);
+        } finally {
+          setIsUploading(false);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -349,25 +357,27 @@ export default function SceneUI() {
                      </div>
                   </div>
 
-                  {/* HORIZONTAL / ONE-LINE CONTENT LAYOUT */}
-                  <div className="absolute bottom-12 left-0 w-full px-10 space-y-6">
+                  {/* HORIZONTAL / ONE-LINE CONTENT LAYOUT - NOW CENTERED & SPACED */}
+                  <div className="absolute bottom-12 left-0 w-full px-10 space-y-8">
                      
-                     <div className="space-y-4">
-                        {/* THE ONE LINE: NAME, PLACE, RATING */}
-                        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2 border-b border-white/10 pb-4">
-                           <h3 className="text-4xl font-serif italic text-white tracking-tighter shrink-0">{sharingItem.name}</h3>
-                           <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-[10px]">
+                     <div className="space-y-6 text-center">
+                        {/* THE DRINK NAME - CENTERED */}
+                        <h3 className="text-5xl font-serif italic text-white tracking-tighter leading-tight">{sharingItem.name}</h3>
+
+                        {/* THE METADATA LINE: PLACE & RATING - SPACED DOWN */}
+                        <div className="flex flex-col items-center gap-4 border-y border-white/5 py-6">
+                           <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-[0.3em] text-[10px]">
                               <MapPin className="w-3 h-3" /> {sharingItem.place}
                            </div>
-                           <div className="flex gap-0.5 ml-auto">
+                           <div className="flex gap-1">
                               {[...Array(5)].map((_, i) => (
-                                 <Star key={i} className={`w-3 h-3 ${i < (sharingItem.rating || 5) ? 'text-primary' : 'text-white/10'}`} fill={i < (sharingItem.rating || 5) ? "currentColor" : "none"} />
+                                 <Star key={i} className={`w-3.5 h-3.5 ${i < (sharingItem.rating || 5) ? 'text-primary' : 'text-white/10'}`} fill={i < (sharingItem.rating || 5) ? "currentColor" : "none"} />
                               ))}
                            </div>
                         </div>
 
-                        {/* NOTES IN ONE CLEAN LINE (MAX 2) */}
-                        <p className="text-[11px] italic text-white/60 font-serif leading-relaxed line-clamp-2">
+                        {/* NOTES - CENTERED */}
+                        <p className="text-xs italic text-white/50 font-serif leading-relaxed px-4">
                            "{sharingItem.notes || 'Another chapter in my coffee journey.'}"
                         </p>
                      </div>
@@ -542,7 +552,12 @@ export default function SceneUI() {
                               <h3 className="text-2xl font-serif italic">Log a Memory</h3>
                               
                               <div onClick={() => fileInputRef.current?.click()} className="w-full h-48 bg-white/5 border-2 border-dashed border-white/10 rounded-[2rem] flex flex-col items-center justify-center gap-2 group cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all overflow-hidden relative">
-                                {newEntry.image ? (
+                                {isUploading ? (
+                                  <div className="flex flex-col items-center gap-2">
+                                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                                     <span className="text-[8px] font-bold uppercase tracking-widest opacity-40">Processing Photo...</span>
+                                  </div>
+                                ) : newEntry.image ? (
                                   <>
                                     <img src={newEntry.image} className="absolute inset-0 w-full h-full object-cover opacity-60" />
                                     <button onClick={(e) => { e.stopPropagation(); setNewEntry({...newEntry, image: null}); }} className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-full hover:bg-red-500 transition-colors z-10"><X className="w-3 h-3" /></button>
@@ -570,8 +585,12 @@ export default function SceneUI() {
                                     ))}
                                  </div>
                               </div>
-                              <button onClick={() => addEntry('tried')} className="w-full bg-primary text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest shadow-xl">
-                                 <Plus className="w-4 h-4" /> Save to Archive
+                              <button 
+                                onClick={() => addEntry('tried')} 
+                                disabled={isUploading}
+                                className="w-full bg-primary text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest shadow-xl disabled:opacity-50"
+                              >
+                                 {isUploading ? "Waiting for Photo..." : <><Plus className="w-4 h-4" /> Save to Archive</>}
                               </button>
                            </div>
                         </div>
